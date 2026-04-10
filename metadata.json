@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Campus Connect V2",
+  "description": "A professional, immersive event management and participation platform for college campuses with QR attendance, food coupon tracking, and AI recommendations.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

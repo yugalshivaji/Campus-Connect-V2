@@ -1,0 +1,21 @@
+{
+  "name": "Campus Connect",
+  "short_name": "CampusConnect",
+  "description": "The Ultimate Campus Ecosystem",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/initials/svg?seed=CC&backgroundColor=3b82f6",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/initials/svg?seed=CC&backgroundColor=3b82f6",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

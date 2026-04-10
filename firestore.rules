@@ -1,0 +1,137 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+         (request.auth.token.email == "yugal.shivaji@gmail.com" && request.auth.token.email_verified == true));
+    }
+    function isOrganizer() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'organizer' || isAdmin());
+    }
+    function isCanteen() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'canteen' || isAdmin());
+    }
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'role']) &&
+             data.uid is string && data.name is string && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.role in ['student', 'organizer', 'admin', 'canteen'] &&
+             (!('phone' in data) || data.phone is string) &&
+             (!('college' in data) || data.college is string) &&
+             (!('course' in data) || data.course is string);
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['title', 'description', 'date', 'venue', 'organizerId', 'category', 'type', 'registrationLimit', 'registeredCount', 'status']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.description is string && data.description.size() < 5000 &&
+             data.registrationLimit is number && data.registrationLimit > 0 &&
+             data.registeredCount is number && data.registeredCount >= 0 &&
+             data.status in ['upcoming', 'ongoing', 'completed'] &&
+             (!('couponCost' in data) || data.couponCost is number) &&
+             (!('maxCoupons' in data) || data.maxCoupons is number);
+    }
+
+    function isValidRegistration(data) {
+      return data.keys().hasAll(['userId', 'eventId', 'status', 'attended', 'couponRedeemed']) &&
+             data.userId is string && data.eventId is string &&
+             data.status in ['pending', 'confirmed', 'rejected'] &&
+             data.attended is bool && data.couponRedeemed is bool;
+    }
+
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['userId', 'eventId', 'scanTime']) &&
+             data.userId is string && data.eventId is string &&
+             isValidDateString(data.scanTime);
+    }
+
+    function isValidCoupon(data) {
+      return data.keys().hasAll(['userId', 'eventId', 'redeemedAt', 'vendorId']) &&
+             data.userId is string && data.eventId is string &&
+             isValidDateString(data.redeemedAt) && data.vendorId is string;
+    }
+
+    function isValidPayment(data) {
+      return data.keys().hasAll(['eventId', 'organizerId', 'amount', 'status', 'requestedAt']) &&
+             data.eventId is string && data.organizerId is string &&
+             data.amount is number && data.status in ['pending', 'approved', 'paid', 'rejected'] &&
+             isValidDateString(data.requestedAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isOrganizer() && isValidEvent(request.resource.data);
+      allow update: if (isOrganizer() && (resource.data.organizerId == request.auth.uid || isAdmin())) && isValidEvent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /registrations/{regId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isOrganizer() || isCanteen());
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId) && isValidRegistration(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (isOwner(resource.data.userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paymentId', 'transactionId', 'paymentScreenshot'])) ||
+        (isOrganizer() && (get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid || isAdmin())) ||
+        (isCanteen() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['couponRedeemed', 'couponRedeemedAt']))
+      ) && isValidRegistration(request.resource.data);
+    }
+
+    match /attendance/{attId} {
+      allow read: if isOrganizer() || isAdmin();
+      allow create: if isOrganizer() && isValidAttendance(request.resource.data);
+    }
+
+    match /coupons/{couponId} {
+      allow read: if isCanteen() || isOrganizer() || isAdmin();
+      allow create: if isCanteen() && isValidCoupon(request.resource.data);
+    }
+
+    match /payments/{payId} {
+      allow read: if isOrganizer() || isCanteen() || isAdmin();
+      allow create: if isCanteen() && isValidPayment(request.resource.data);
+      allow update: if (isOrganizer() || isAdmin()) && isValidPayment(request.resource.data);
+    }
+
+    match /societies/{socId} {
+      allow read: if true;
+      allow create: if isOrganizer();
+      allow update: if isOrganizer() && (resource.data.organizerId == request.auth.uid || isAdmin());
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isOrganizer() || isAdmin();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+  }
+}

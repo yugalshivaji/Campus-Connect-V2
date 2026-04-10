@@ -1,0 +1,165 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "User profile information and role",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["student", "organizer", "admin", "canteen"] },
+        "phone": { "type": "string" },
+        "college": { "type": "string" },
+        "course": { "type": "string" },
+        "interests": { "type": "array", "items": { "type": "string" } },
+        "points": { "type": "number" },
+        "badges": { "type": "array", "items": { "type": "string" } },
+        "societyId": { "type": "string" },
+        "followedSocieties": { "type": "array", "items": { "type": "string" } },
+        "photoURL": { "type": "string" },
+        "vendorName": { "type": "string" },
+        "organisation": { "type": "string" },
+        "upiId": { "type": "string" },
+        "razorpayId": { "type": "string" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "events": {
+      "title": "Event",
+      "description": "Campus event details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "venue": { "type": "string" },
+        "organizerId": { "type": "string" },
+        "category": { "type": "string" },
+        "type": { "type": "string", "enum": ["free", "paid"] },
+        "fee": { "type": "number" },
+        "couponCost": { "type": "number" },
+        "maxCoupons": { "type": "number" },
+        "registrationLimit": { "type": "number" },
+        "registeredCount": { "type": "number" },
+        "posterUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["upcoming", "ongoing", "completed"] },
+        "hasFoodCoupon": { "type": "boolean" },
+        "isCanteenPaymentDone": { "type": "boolean" },
+        "qrVisible": { "type": "boolean" },
+        "qrExpiry": { "type": "string" },
+        "qrScanLimit": { "type": "number" },
+        "couponsDistributed": { "type": "boolean" }
+      },
+      "required": ["title", "description", "date", "venue", "organizerId", "category", "type", "registrationLimit", "registeredCount", "status"]
+    },
+    "registrations": {
+      "title": "Registration",
+      "description": "Student registration for an event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "eventId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "rejected"] },
+        "paymentId": { "type": "string" },
+        "attended": { "type": "boolean" },
+        "couponRedeemed": { "type": "boolean" },
+        "qrCode": { "type": "string" },
+        "scannedAt": { "type": "string", "format": "date-time" },
+        "couponActive": { "type": "boolean" }
+      },
+      "required": ["userId", "eventId", "status", "attended", "couponRedeemed"]
+    },
+    "societies": {
+      "title": "Society",
+      "description": "Campus society details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "followerCount": { "type": "number" },
+        "organizerId": { "type": "string" }
+      },
+      "required": ["name", "description", "category", "organizerId"]
+    },
+    "attendance": {
+      "title": "Attendance",
+      "description": "Attendance log for events",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "eventId": { "type": "string" },
+        "scanTime": { "type": "string", "format": "date-time" },
+        "verifiedBy": { "type": "string" }
+      },
+      "required": ["userId", "eventId", "scanTime"]
+    },
+    "coupons": {
+      "title": "CouponRedemption",
+      "description": "Log of food coupon redemptions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "eventId": { "type": "string" },
+        "redeemedAt": { "type": "string", "format": "date-time" },
+        "vendorId": { "type": "string" }
+      },
+      "required": ["userId", "eventId", "redeemedAt", "vendorId"]
+    },
+    "payments": {
+      "title": "CanteenPayment",
+      "description": "Payment from organizer to canteen vendor",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "eventTitle": { "type": "string" },
+        "organizerId": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "amount": { "type": "number" },
+        "studentCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "paid", "rejected"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "requestedAt": { "type": "string", "format": "date-time" },
+        "paidAt": { "type": "string", "format": "date-time" },
+        "razorpayPaymentId": { "type": "string" },
+        "upiTransactionId": { "type": "string" }
+      },
+      "required": ["eventId", "organizerId", "amount", "status", "requestedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "users",
+      "description": "User profiles"
+    },
+    "events/{eventId}": {
+      "schema": "events",
+      "description": "Event documents"
+    },
+    "registrations/{registrationId}": {
+      "schema": "registrations",
+      "description": "Event registrations"
+    },
+    "societies/{societyId}": {
+      "schema": "societies",
+      "description": "Society documents"
+    },
+    "attendance/{attendanceId}": {
+      "schema": "attendance",
+      "description": "Attendance logs"
+    },
+    "coupons/{couponId}": {
+      "schema": "coupons",
+      "description": "Coupon redemptions"
+    },
+    "payments/{paymentId}": {
+      "schema": "payments",
+      "description": "Canteen payments"
+    }
+  }
+}
